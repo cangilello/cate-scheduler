@@ -1,0 +1,129 @@
+# Public scheduler for cangilello/jarvis-options-trading (branch jarvis-original-con-clave).
+# Job output is suppressed because this repo's logs are public.
+name: Jarvis cloud jobs
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run
+        required: true
+        type: choice
+        default: alerts
+        options:
+          - autostop
+          - alerts
+          - scan
+  schedule:
+    - cron: "*/10 * * * *"
+    - cron: "*/30 * * * *"
+    - cron: "35 13,14 * * 1-5"
+    - cron: "30 16,17 * * 1-5"
+    - cron: "30 19,20 * * 1-5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jarvis-cloud-${{ github.job }}
+  cancel-in-progress: false
+
+jobs:
+  autostop:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'autostop')
+      || github.event.schedule == '*/10 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: cangilello/jarvis-options-trading
+          ref: jarvis-original-con-clave
+          ssh-key: ${{ secrets.JARVIS_DEPLOY_KEY }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r requirements.txt > /dev/null 2>&1 || { echo "pip install failed"; exit 1; }
+      - name: Run autostop (output suppressed; logs are public)
+        run: |
+          set +e
+          python -m src.cloud_jobs autostop > /dev/null 2>&1
+          rc=$?
+          if [ $rc -eq 0 ]; then echo "autostop: SUCCESS"; else echo "autostop: FAILED (exit $rc)"; fi
+          exit $rc
+        env:
+          TRADIER_API_TOKEN: ${{ secrets.TRADIER_API_TOKEN }}
+          TRADIER_BASE_URL: ${{ secrets.TRADIER_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+
+  alerts:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'alerts')
+      || github.event.schedule == '*/30 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: cangilello/jarvis-options-trading
+          ref: jarvis-original-con-clave
+          ssh-key: ${{ secrets.JARVIS_DEPLOY_KEY }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r requirements.txt > /dev/null 2>&1 || { echo "pip install failed"; exit 1; }
+      - name: Run alerts (output suppressed; logs are public)
+        run: |
+          set +e
+          python -m src.cloud_jobs alerts > /dev/null 2>&1
+          rc=$?
+          if [ $rc -eq 0 ]; then echo "alerts: SUCCESS"; else echo "alerts: FAILED (exit $rc)"; fi
+          exit $rc
+        env:
+          TRADIER_API_TOKEN: ${{ secrets.TRADIER_API_TOKEN }}
+          TRADIER_BASE_URL: ${{ secrets.TRADIER_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          ALERT_SMTP_HOST: ${{ secrets.ALERT_SMTP_HOST }}
+          ALERT_SMTP_PORT: ${{ secrets.ALERT_SMTP_PORT }}
+          ALERT_SMTP_USER: ${{ secrets.ALERT_SMTP_USER }}
+          ALERT_SMTP_PASSWORD: ${{ secrets.ALERT_SMTP_PASSWORD }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+
+  scan:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scan')
+      || github.event.schedule == '35 13,14 * * 1-5'
+      || github.event.schedule == '30 16,17 * * 1-5'
+      || github.event.schedule == '30 19,20 * * 1-5'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: cangilello/jarvis-options-trading
+          ref: jarvis-original-con-clave
+          ssh-key: ${{ secrets.JARVIS_DEPLOY_KEY }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r requirements.txt > /dev/null 2>&1 || { echo "pip install failed"; exit 1; }
+      - name: Run scan (output suppressed; logs are public)
+        run: |
+          set +e
+          python -m src.cloud_jobs scan > /dev/null 2>&1
+          rc=$?
+          if [ $rc -eq 0 ]; then echo "scan: SUCCESS"; else echo "scan: FAILED (exit $rc)"; fi
+          exit $rc
+        env:
+          TRADIER_API_TOKEN: ${{ secrets.TRADIER_API_TOKEN }}
+          TRADIER_BASE_URL: ${{ secrets.TRADIER_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
